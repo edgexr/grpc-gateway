@@ -2,6 +2,7 @@ package descriptor
 
 import (
 	"fmt"
+	"io/ioutil"
 	"path"
 	"path/filepath"
 	"strings"
@@ -10,6 +11,7 @@ import (
 	descriptor "github.com/golang/protobuf/protoc-gen-go/descriptor"
 	plugin "github.com/golang/protobuf/protoc-gen-go/plugin"
 	"google.golang.org/genproto/googleapis/api/annotations"
+	"gopkg.in/yaml.v2"
 )
 
 // Registry is a registry of information extracted from plugin.CodeGeneratorRequest.
@@ -97,11 +99,19 @@ type Registry struct {
 
 	// omitPackageDoc, if false, causes a package comment to be included in the generated code.
 	omitPackageDoc bool
+
+	// Custom configuration
+	config Config
 }
 
 type repeatedFieldSeparator struct {
 	name string
 	sep  rune
+}
+
+type Config struct {
+	SkipMethods map[string]string
+	SkipFields  map[string]map[string]string
 }
 
 // NewRegistry returns a new Registry.
@@ -604,4 +614,19 @@ func (r *Registry) packageIdentityName(f *descriptor.FileDescriptorProto) string
 		return strings.TrimSuffix(base, ext)
 	}
 	return f.GetPackage()
+}
+
+func (r *Registry) ParseConfigFile(filename string) error {
+	if filename == "" {
+		return nil
+	}
+	dat, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return err
+	}
+	return yaml.Unmarshal(dat, &r.config)
+}
+
+func (r *Registry) GetConfig() *Config {
+	return &r.config
 }
